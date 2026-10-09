@@ -1,0 +1,61 @@
+# Nome do workflow que aparecerá na aba "Actions" do GitHub
+name: Testes Java
+
+# Define os eventos que irão disparar este workflow
+on:
+  # Permite executar o workflow manualmente pela aba "Actions" do GitHub
+  workflow_dispatch:
+
+  # Executa o workflow quando um Pull Request for criado, atualizado ou reaberto
+  pull_request:
+
+  # Executa o workflow sempre que ocorrer um push para qualquer branch.
+  # Um merge também gera um push, portanto o workflow roda após o merge
+  push:
+
+# Define os trabalhos que serão executados pelo workflow
+jobs:
+
+  # Nome do job
+  testes:
+
+    # Executa o job uma vez para cada projeto Maven do repositório
+    strategy:
+      fail-fast: false
+      matrix:
+        projeto: [teste-junit, exercicio1-imc, exercicio2-potencia]
+
+    name: testes (${{ matrix.projeto }})
+
+    # Sistema operacional da máquina virtual utilizada pelo GitHub Actions
+    runs-on: ubuntu-latest
+
+    # Os comandos "run" são executados dentro da pasta do projeto
+    defaults:
+      run:
+        working-directory: ${{ matrix.projeto }}
+
+    # Lista de etapas que serão executadas em sequência
+    steps:
+
+      # Faz o checkout do repositório, ou seja, baixa o código
+      # do projeto para dentro da máquina virtual
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      # Instala e configura o Java 21 utilizando a distribuição Eclipse Temurin
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          # Distribuição do Java que será utilizada
+          distribution: 'temurin'
+          # Versão do Java utilizada pelo projeto
+          java-version: '21'
+          # Ativa o cache das dependências do Maven para acelerar execuções futuras
+          cache: 'maven'
+          cache-dependency-path: ${{ matrix.projeto }}/pom.xml
+
+      # Executa os testes unitários do projeto utilizando o Maven.
+      # Se algum teste falhar, o workflow também será marcado como falha
+      - name: Executar testes
+        run: mvn -B test
